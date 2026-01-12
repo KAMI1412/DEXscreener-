@@ -431,16 +431,33 @@
 
         lucide.createIcons();
 
-        // Helper to fetch through proxy
+        // Helper to fetch through proxy with fallback
         async function fetchProxy(url) {
-            try {
-                const res = await fetch(API.PROXY(url));
-                const data = await res.json();
-                return JSON.parse(data.contents);
-            } catch (e) {
-                console.error("Proxy error:", e);
-                return null;
+            const proxies = [
+                (u) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
+                (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+                (u) => `https://thingproxy.freeboard.io/fetch/${u}`
+            ];
+
+            for (const proxyFn of proxies) {
+                try {
+                    const proxyUrl = proxyFn(url);
+                    console.log(`Trying proxy: ${proxyUrl}`);
+                    const res = await fetch(proxyUrl);
+                    if (!res.ok) continue;
+
+                    if (proxyUrl.includes('allorigins')) {
+                        const data = await res.json();
+                        return JSON.parse(data.contents);
+                    } else {
+                        return await res.json();
+                    }
+                } catch (e) {
+                    console.warn(`Proxy failed:`, e);
+                    continue;
+                }
             }
+            return null;
         }
 
         async function fetchTokens() {
