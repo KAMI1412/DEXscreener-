@@ -400,12 +400,13 @@
             CHAIN: 'solana',
             MIN_LIQUIDITY: 5000,
             STRICT_GROWTH: 1000,
-            TRENDING_GROWTH: 50, // Fallback to show trending if 1000% is empty
+            TRENDING_GROWTH: 50,
         };
 
         const API = {
             SEARCH: (q) => `https://api.dexscreener.com/latest/dex/search/?q=${q}`,
-            LATEST: 'https://api.dexscreener.com/token-profiles/latest/v1',
+            PROFILES: 'https://api.dexscreener.com/token-profiles/latest/v1',
+            PAIRS: 'https://api.dexscreener.com/token-boosts/latest/v1',
             TOP_TRADERS: (pairAddr) => `https://io.dexscreener.com/dex/log/top-traders/v2/solana/${pairAddr}`,
             PROXY: (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`
         };
@@ -432,29 +433,52 @@
 
         // Helper to fetch through proxy
         async function fetchProxy(url) {
-            const res = await fetch(API.PROXY(url));
-            const data = await res.json();
-            return JSON.parse(data.contents);
+            try {
+                const res = await fetch(API.PROXY(url));
+                const data = await res.json();
+                return JSON.parse(data.contents);
+            } catch (e) {
+                console.error("Proxy error:", e);
+                return null;
+            }
         }
 
         async function fetchTokens() {
             tokenLoader.style.display = 'flex';
             tokenTable.style.display = 'none';
             walletSection.style.display = 'none';
-            loaderText.innerText = "Discovering Solana pairs across categories...";
+            loaderText.innerText = "Discovering active Solana pairs...";
 
             try {
-                // Multi-query search strategy to sweep more pairs
-                const queries = ['solana', 'meme', 'pump', 'moon', 'ai', 'dog'];
                 let allPairs = [];
 
+                // 1. Fetch from Token Boosts
+                loaderText.innerText = "Scanning hot tokens...";
+                const boostRes = await fetch(API.PAIRS);
+                const boosts = await boostRes.json();
+                const boostAddrs = boosts.slice(0, 15).map(b => b.tokenAddress).join(',');
+
+                // 2. Fetch from Latest Profiles
+                loaderText.innerText = "Scanning new profiles...";
+                const profileRes = await fetch(API.PROFILES);
+                const profiles = await profileRes.json();
+                const profileAddrs = profiles.filter(p => p.chainId === 'solana').slice(0, 15).map(p => p.tokenAddress).join(',');
+
+                // 3. Broad Search Discovery
+                const queries = ['solana', 'meme', 'raydium', 'pump', 'moon'];
                 for (const q of queries) {
                     loaderText.innerText = `Searching pool: ${q}...`;
                     const res = await fetch(API.SEARCH(q));
                     const data = await res.json();
-                    if (data.pairs) {
-                        allPairs = [...allPairs, ...data.pairs];
-                    }
+                    if (data.pairs) allPairs = [...allPairs, ...data.pairs];
+                }
+
+                // 4. Resolve address batches to get full pair data
+                const batches = [boostAddrs, profileAddrs].filter(a => a);
+                for (const b of batches) {
+                    const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${b}`);
+                    const data = await res.json();
+                    if (data.pairs) allPairs = [...allPairs, ...data.pairs];
                 }
 
                 // De-duplicate pairs
@@ -466,12 +490,10 @@
                     if (pair.chainId !== 'solana') return false;
                     const liq = pair.liquidity?.usd || 0;
                     const h24 = pair.priceChange?.h24 || 0;
-                    const h6 = pair.priceChange?.h6 || 0;
 
-                    return liq >= FILTERS.MIN_LIQUIDITY && (h24 >= FILTERS.TRENDING_GROWTH || h6 >= 20);
+                    return liq >= FILTERS.MIN_LIQUIDITY && h24 >= 10; // Loosened for visibility
                 });
 
-                // Sort by growth
                 explosiveTokens.sort((a, b) => (b.priceChange?.h24 || 0) - (a.priceChange?.h24 || 0));
 
                 const explosiveCount = explosiveTokens.filter(t => (t.priceChange?.h24 || 0) >= FILTERS.STRICT_GROWTH).length;
@@ -481,7 +503,7 @@
 
             } catch (error) {
                 console.error("Discovery error:", error);
-                tokenLoader.innerHTML = `<p style="color:red">Discovery Fail: ${error.message}</p>`;
+                tokenLoader.innerHTML = `<p style="color:red">Discovery Fail: ${error.message}. Please click Scan again.</p>`;
             }
         }
 
@@ -539,23 +561,18 @@
             walletSection.scrollIntoView({ behavior: 'smooth' });
 
             try {
-                // Using PROXY to bypass CORS for internal dexscreener endpoint
                 const url = API.TOP_TRADERS(pairAddr);
                 const data = await fetchProxy(url);
 
+                if (!data || !data.traders) throw new Error("Could not fetch trader data.");
+
                 const top30 = (data.traders || []).slice(0, 30);
-
-                // Calculate "Smart Money" count (Profit > 500%)
-                // Note: Indexing PnL as absolute USD, checking if we can derive % or just count winners
-                const smartCount = top30.filter(t => t.pnl > 0).length;
-                statSmart.innerText = smartCount;
-
                 renderWallets(top30);
 
             } catch (error) {
                 console.error("Wallet analysis error:", error);
                 walletLoader.innerHTML = `<p style="color:red">Analysis Error: ${error.message}
-                <br><br><small>This usually happens if the CORS proxy is busy or the token is too new for trader logs.</small></p>`;
+                <br><br><small>This usually happens if the CORS proxy is busy. Please try again in 5 seconds.</small></p>`;
             }
         }
 
@@ -569,20 +586,21 @@
                 return;
             }
 
+            let smartCount = 0;
             traders.forEach((t, index) => {
                 const tr = document.createElement('tr');
                 const profit = t.pnl || 0;
                 const buyUsd = t.boughtUsd || 0;
                 const sellUsd = t.soldUsd || 0;
 
-                // Profit % calculation
                 const profitPct = buyUsd > 0 ? ((profit / buyUsd) * 100).toFixed(0) : "0";
-
-                // HIGHLIGHT LOGIC: Bought and made profit
                 const isProfitableBuyer = buyUsd > 0 && profit > 0;
                 const isElite = isProfitableBuyer && profitPct >= 500;
 
-                if (isElite) tr.classList.add('elite-wallet');
+                if (isElite) {
+                    tr.classList.add('elite-wallet');
+                    smartCount++;
+                }
 
                 tr.innerHTML = `
                     <td>#${index + 1}</td>
@@ -601,6 +619,7 @@
                 `;
                 walletBody.appendChild(tr);
             });
+            statSmart.innerText = smartCount;
         }
 
         async function scanCa() {
@@ -619,7 +638,6 @@
                     throw new Error("No pairs found for this CA.");
                 }
 
-                // Filter for Solana pairs if multiple found
                 const solPairs = data.pairs.filter(p => p.chainId === 'solana');
                 if (solPairs.length === 0) throw new Error("This CA is not on Solana.");
 
