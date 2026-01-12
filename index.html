@@ -4,7 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Solana Memecoin Analyzer | Smart Money Tracker</title>
+    <title>Solana On-Chain Analyzer | RPC Engine</title>
+    <!-- Dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.87.6/lib/index.iife.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -35,7 +37,7 @@
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             padding: 2rem;
         }
@@ -44,7 +46,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 3rem;
+            margin-bottom: 2rem;
             animation: fadeIn 0.8s ease-out;
         }
 
@@ -63,11 +65,41 @@
             font-size: 0.9rem;
         }
 
+        /* Toolbar & RPC Settings */
+        .toolbar {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            background: rgba(22, 24, 28, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 1rem;
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            margin-bottom: 2rem;
+        }
+
+        .rpc-config {
+            display: flex;
+            gap: 0.5rem;
+            flex: 1;
+        }
+
+        .rpc-config input {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            color: #00ffbd;
+            padding: 0.6rem;
+            border-radius: 8px;
+            flex: 1;
+            font-size: 0.8rem;
+            font-family: monospace;
+        }
+
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 1.5rem;
-            margin-bottom: 3rem;
+            margin-bottom: 2rem;
         }
 
         .stat-card {
@@ -75,63 +107,28 @@
             border: 1px solid var(--glass-border);
             padding: 1.5rem;
             border-radius: 16px;
-            transition: transform 0.3s ease, border-color 0.3s ease;
+            transition: transform 0.3s ease;
             position: relative;
-            overflow: hidden;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
-            border-color: var(--accent-color);
         }
 
         .stat-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 1rem;
+            margin-bottom: 0.5rem;
             color: var(--text-secondary);
+            font-size: 0.9rem;
         }
 
         .stat-value {
-            font-size: 2rem;
+            font-size: 1.8rem;
             font-weight: 700;
         }
 
-        .stat-change {
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .up {
-            color: var(--success);
-        }
-
-        .down {
-            color: var(--danger);
-        }
-
-        .main-content {
+        .main-grid {
             display: grid;
-            grid-template-columns: 1fr;
+            grid-template-columns: 1fr 350px;
             gap: 2rem;
-        }
-
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-        }
-
-        .section-title {
-            font-size: 1.4rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 12px;
         }
 
         .data-table-container {
@@ -139,6 +136,7 @@
             border: 1px solid var(--glass-border);
             border-radius: 16px;
             overflow: hidden;
+            height: fit-content;
         }
 
         table {
@@ -151,46 +149,22 @@
             padding: 1rem;
             background: rgba(255, 255, 255, 0.03);
             color: var(--text-secondary);
-            font-weight: 500;
-            font-size: 0.85rem;
+            font-size: 0.75rem;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
 
         td {
-            padding: 1.25rem 1rem;
+            padding: 1rem;
             border-bottom: 1px solid var(--glass-border);
-            font-size: 0.95rem;
-        }
-
-        tr:last-child td {
-            border-bottom: none;
-        }
-
-        tr:hover td {
-            background: rgba(255, 255, 255, 0.02);
-        }
-
-        .token-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .token-name {
-            font-weight: 600;
-        }
-
-        .token-symbol {
-            color: var(--text-secondary);
-            font-size: 0.8rem;
+            font-size: 0.9rem;
         }
 
         .badge {
             padding: 4px 8px;
             border-radius: 6px;
-            font-size: 0.75rem;
-            font-weight: 600;
+            font-size: 0.7rem;
+            font-weight: 700;
         }
 
         .badge-success {
@@ -198,26 +172,67 @@
             color: var(--success);
         }
 
-        .badge-info {
-            background: rgba(0, 242, 255, 0.1);
-            color: var(--accent-color);
-        }
-
         .badge-warning {
             background: rgba(255, 165, 0, 0.1);
             color: #ffa500;
         }
 
-        .elite-wallet {
-            border: 1px solid #ffd700;
-            background: rgba(255, 215, 0, 0.05) !important;
-            box-shadow: inset 0 0 10px rgba(255, 215, 0, 0.1);
+        .badge-rpc {
+            background: rgba(0, 242, 255, 0.1);
+            color: var(--accent-color);
         }
 
-        .highlight-address {
-            color: #ffd700 !important;
+        .elite-wallet {
+            background: rgba(255, 215, 0, 0.05) !important;
+            border-left: 3px solid #ffd700;
+        }
+
+        /* Live Feed */
+        .live-feed {
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1rem;
+            height: 600px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .feed-header {
             font-weight: 700;
-            text-shadow: 0 0 5px rgba(255, 215, 0, 0.3);
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--accent-color);
+        }
+
+        #feed-content {
+            flex: 1;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.8rem;
+        }
+
+        .feed-item {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .feed-item .time {
+            color: var(--text-secondary);
+            margin-right: 8px;
+        }
+
+        .feed-item .msg {
+            color: #fff;
+        }
+
+        .feed-item .tag {
+            color: var(--success);
+            font-weight: 700;
         }
 
         .loader {
@@ -226,35 +241,29 @@
             align-items: center;
             justify-content: center;
             padding: 4rem;
-            color: var(--text-secondary);
         }
 
         .spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid rgba(255, 255, 255, 0.1);
+            width: 30px;
+            height: 30px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
             border-top-color: var(--accent-color);
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin-bottom: 1rem;
         }
 
         .refresh-btn {
             background: linear-gradient(45deg, var(--accent-color), var(--secondary-accent));
             border: none;
             color: white;
-            padding: 0.8rem 1.5rem;
-            border-radius: 12px;
+            padding: 0.6rem 1.2rem;
+            border-radius: 10px;
             font-weight: 600;
             cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 8px;
-            transition: opacity 0.3s;
-        }
-
-        .refresh-btn:hover {
-            opacity: 0.9;
+            gap: 6px;
+            font-size: 0.85rem;
         }
 
         @keyframes spin {
@@ -275,22 +284,30 @@
             }
         }
 
-        /* Mobile Adjustments */
-        @media (max-width: 768px) {
-            .container {
-                padding: 1rem;
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
             }
 
-            .stat-value {
-                font-size: 1.5rem;
+            to {
+                opacity: 1;
+                transform: translateX(0);
             }
+        }
 
-            th:nth-child(4),
-            td:nth-child(4),
-            th:nth-child(5),
-            td:nth-child(5) {
-                display: none;
-            }
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--glass-border);
+            border-radius: 10px;
         }
     </style>
 </head>
@@ -299,238 +316,222 @@
     <div class="container">
         <header>
             <div class="logo-section">
-                <h1>ANALYTICS ENGINE</h1>
-                <p>Solana Memecoin & Smart Money Tracker</p>
+                <h1>ON-CHAIN BATTLESTATION</h1>
+                <p>Real-Time Solana RPC Insights & Token Discovery</p>
             </div>
-            <div class="search-container" style="display: flex; gap: 10px; flex: 1; max-width: 400px; margin: 0 2rem;">
-                <input type="text" id="ca-input" placeholder="Paste Solana CA..."
-                    style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: white; padding: 0.8rem; border-radius: 12px; flex: 1; font-family: monospace;">
-                <button class="refresh-btn" id="scan-ca-btn" style="padding: 0.8rem; aspect-ratio: 1/1;">
-                    <i data-lucide="search"></i>
-                </button>
+            <div class="search-container" style="display: flex; gap: 10px; max-width: 400px; flex: 1; margin: 0 1rem;">
+                <input type="text" id="ca-input" placeholder="Solana CA Scan..."
+                    style="background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); color: white; padding: 0.7rem; border-radius: 10px; flex: 1; font-family: monospace;">
+                <button class="refresh-btn" id="scan-ca-btn">Scan</button>
             </div>
             <button class="refresh-btn" id="refresh-btn">
-                <i data-lucide="refresh-cw"></i> Scan Market
+                <i data-lucide="zap"></i> Quick Scan
             </button>
         </header>
 
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-header">
-                    <span>Active Pairs Scanned</span>
-                    <i data-lucide="search"></i>
-                </div>
-                <div class="stat-value" id="stat-scanned">0</div>
-                <div class="stat-change up"><i data-lucide="trending-up"></i> Live Tracking</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-header">
-                    <span>Explosive Tokens (>1000%)</span>
-                    <i data-lucide="zap"></i>
-                </div>
-                <div class="stat-value" id="stat-explosive">0</div>
-                <div class="stat-change up" id="stat-explosive-label">Last 48 Hours</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-header">
-                    <span>Smart Money Detected</span>
-                    <i data-lucide="wallet"></i>
-                </div>
-                <div class="stat-value" id="stat-smart">0</div>
-                <div class="stat-change up">Profit > 500%</div>
+        <div class="toolbar">
+            <div class="rpc-config">
+                <span style="font-size: 0.75rem; color: var(--text-secondary); align-self: center;">SOLANA RPC:</span>
+                <input type="text" id="rpc-url" placeholder="Paste QuickNode/Alchemy/Helius URL..."
+                    value="https://api.mainnet-beta.solana.com">
+                <span id="connection-status" class="badge badge-rpc">CONNECTING...</span>
             </div>
         </div>
 
-        <div class="main-content">
-            <section>
-                <div class="section-header">
-                    <h2 class="section-title"><i data-lucide="bar-chart-2"></i> Explosive Solana Gainers</h2>
-                </div>
-                <div class="data-table-container" id="token-table-container">
-                    <div class="loader" id="token-loader">
-                        <div class="spinner"></div>
-                        <p id="loader-text">Initializing scan...</p>
-                    </div>
-                    <table id="token-table" style="display: none;">
-                        <thead>
-                            <tr>
-                                <th>Token</th>
-                                <th>Price Change (24h)</th>
-                                <th>Liquidity</th>
-                                <th>Volume (24h)</th>
-                                <th>Growth Type</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="token-body"></tbody>
-                    </table>
-                </div>
-            </section>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-header"><span>Block Height</span><i data-lucide="cloud"></i></div>
+                <div class="stat-value" id="stat-height">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-header"><span>RPC Latency</span><i data-lucide="activity"></i></div>
+                <div class="stat-value" style="color: var(--success);" id="stat-latency">- ms</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-header"><span>On-Chain Events</span><i data-lucide="database"></i></div>
+                <div class="stat-value" id="stat-events">0</div>
+            </div>
+        </div>
 
-            <section id="wallet-section" style="display: none; margin-top: 3rem;">
-                <div class="section-header">
-                    <h2 class="section-title"><i data-lucide="users"></i> Smart Money Analysis</h2>
-                </div>
-                <div class="data-table-container">
-                    <div class="loader" id="wallet-loader">
-                        <div class="spinner"></div>
-                        <p>Analyzing top 30 wallets for <span id="analyzing-token-name">...</span></p>
+        <div class="main-grid">
+            <div class="content-left">
+                <section>
+                    <div class="section-header">
+                        <h3 style="display:flex;align-items:center;gap:8px;"><i data-lucide="flame"
+                                style="color:#ffa500"></i> Hot Pairs (DexScreener + RPC Verification)</h3>
                     </div>
-                    <table id="wallet-table" style="display: none;">
-                        <thead>
-                            <tr>
-                                <th>Rank</th>
-                                <th>Wallet Address</th>
-                                <th>Total Profit</th>
-                                <th>Bought</th>
-                                <th>Sold</th>
-                                <th>Activity</th>
-                            </tr>
-                        </thead>
-                        <tbody id="wallet-body"></tbody>
-                    </table>
+                    <div class="data-table-container">
+                        <table id="token-table">
+                            <thead>
+                                <tr>
+                                    <th>Token</th>
+                                    <th>Price/Growth</th>
+                                    <th>Liquidity (USD)</th>
+                                    <th>Verified?</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="token-body">
+                                <tr>
+                                    <td colspan="5" class="loader">
+                                        <div class="spinner"></div>
+                                        <p style="margin-top:1rem; color:var(--text-secondary);">Listening to chain...
+                                        </p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section id="wallet-section" style="display: none; margin-top: 2rem;">
+                    <div class="section-header">
+                        <h3><i data-lucide="wallet"></i> Holder Verification</h3>
+                    </div>
+                    <div class="data-table-container">
+                        <table id="wallet-table">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Address</th>
+                                    <th>Profit</th>
+                                    <th>Token Balance</th>
+                                    <th>Label</th>
+                                </tr>
+                            </thead>
+                            <tbody id="wallet-body"></tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <div class="content-right">
+                <div class="live-feed">
+                    <div class="feed-header"><i data-lucide="radio"></i> Real-Time Feed</div>
+                    <div id="feed-content">
+                        <!-- Items injected here -->
+                    </div>
                 </div>
-            </section>
+            </div>
         </div>
     </div>
 
     <script>
-        // Configuration
+        const { Connection, PublicKey } = solanaWeb3;
+
+        let connection;
+        let eventCount = 0;
+
         const FILTERS = {
-            CHAIN: 'solana',
             MIN_LIQUIDITY: 5000,
-            STRICT_GROWTH: 1000,
-            TRENDING_GROWTH: 50,
+            STRICT_GROWTH: 1000
         };
 
         const API = {
             SEARCH: (q) => `https://api.dexscreener.com/latest/dex/search/?q=${q}`,
+            BOOSTS: 'https://api.dexscreener.com/token-boosts/latest/v1',
             PROFILES: 'https://api.dexscreener.com/token-profiles/latest/v1',
-            PAIRS: 'https://api.dexscreener.com/token-boosts/latest/v1',
             TOP_TRADERS: (pairAddr) => `https://io.dexscreener.com/dex/log/top-traders/v2/solana/${pairAddr}`,
             PROXY: (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`
         };
 
-        // DOM Elements
-        const refreshBtn = document.getElementById('refresh-btn');
-        const scanCaBtn = document.getElementById('scan-ca-btn');
-        const caInput = document.getElementById('ca-input');
-        const tokenTable = document.getElementById('token-table');
+        // UI Elements
+        const rpcInput = document.getElementById('rpc-url');
+        const connStatus = document.getElementById('connection-status');
+        const feedContent = document.getElementById('feed-content');
         const tokenBody = document.getElementById('token-body');
-        const tokenLoader = document.getElementById('token-loader');
-        const loaderText = document.getElementById('loader-text');
         const walletSection = document.getElementById('wallet-section');
-        const walletTable = document.getElementById('wallet-table');
         const walletBody = document.getElementById('wallet-body');
-        const walletLoader = document.getElementById('wallet-loader');
-        const analyzedTokenName = document.getElementById('analyzing-token-name');
 
-        const statScanned = document.getElementById('stat-scanned');
-        const statExplosive = document.getElementById('stat-explosive');
-        const statSmart = document.getElementById('stat-smart');
+        const statHeight = document.getElementById('stat-height');
+        const statLatency = document.getElementById('stat-latency');
+        const statEvents = document.getElementById('stat-events');
 
         lucide.createIcons();
 
-        // Helper to fetch through proxy with fallback
-        async function fetchProxy(url) {
-            const proxies = [
-                (u) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
-                (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
-                (u) => `https://thingproxy.freeboard.io/fetch/${u}`
-            ];
+        // 1. Initialize RPC Connection
+        async function initRPC() {
+            const url = rpcInput.value.trim();
+            try {
+                connStatus.innerText = "CONNECTING...";
+                connStatus.className = "badge badge-rpc";
 
-            for (const proxyFn of proxies) {
-                try {
-                    const proxyUrl = proxyFn(url);
-                    console.log(`Trying proxy: ${proxyUrl}`);
-                    const res = await fetch(proxyUrl);
-                    if (!res.ok) continue;
+                const start = Date.now();
+                connection = new Connection(url, 'confirmed');
+                const height = await connection.getBlockHeight();
+                const latency = Date.now() - start;
 
-                    if (proxyUrl.includes('allorigins')) {
-                        const data = await res.json();
-                        return JSON.parse(data.contents);
-                    } else {
-                        return await res.json();
-                    }
-                } catch (e) {
-                    console.warn(`Proxy failed:`, e);
-                    continue;
-                }
+                statHeight.innerText = height.toLocaleString();
+                statLatency.innerText = `${latency}ms`;
+                connStatus.innerText = "CONNECTED";
+                connStatus.style.color = "var(--success)";
+
+                logToFeed(`RPC Linked: ${url.substring(0, 20)}...`, 'system');
+            } catch (e) {
+                console.error("RPC Error:", e);
+                connStatus.innerText = "DISCONNECTED";
+                connStatus.style.color = "var(--danger)";
+                logToFeed(`RPC Error: Failed to link. Check URL.`, 'error');
             }
-            return null;
         }
 
+        function logToFeed(msg, type = 'info') {
+            eventCount++;
+            statEvents.innerText = eventCount;
+
+            const div = document.createElement('div');
+            div.className = 'feed-item';
+            const now = new Date();
+            const time = now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds();
+
+            let tag = '';
+            if (type === 'new') tag = '<span class="tag">[NEW POOL]</span> ';
+            if (type === 'whale') tag = '<span class="tag" style="color:#ff00ff">[WHALE BUY]</span> ';
+
+            div.innerHTML = `<span class="time">${time}</span> ${tag}${msg}`;
+            feedContent.prepend(div);
+        }
+
+        // 2. Fetch Tokens with Multi-Source Discovery
         async function fetchTokens() {
-            tokenLoader.style.display = 'flex';
-            tokenTable.style.display = 'none';
-            walletSection.style.display = 'none';
-            loaderText.innerText = "Discovering active Solana pairs...";
+            tokenBody.innerHTML = '<tr><td colspan="5" class="loader"><div class="spinner"></div></td></tr>';
 
             try {
+                logToFeed(`Scanning DexScreener & On-Chain feeds...`);
                 let allPairs = [];
 
-                // 1. Fetch from Token Boosts
-                loaderText.innerText = "Scanning hot tokens...";
-                const boostRes = await fetch(API.PAIRS);
-                const boosts = await boostRes.json();
-                const boostAddrs = boosts.slice(0, 15).map(b => b.tokenAddress).join(',');
+                // Parallel discovery
+                const [boostRes, profileRes] = await Promise.all([
+                    fetch(API.BOOSTS).then(r => r.json()),
+                    fetch(API.PROFILES).then(r => r.json())
+                ]);
 
-                // 2. Fetch from Latest Profiles
-                loaderText.innerText = "Scanning new profiles...";
-                const profileRes = await fetch(API.PROFILES);
-                const profiles = await profileRes.json();
-                const profileAddrs = profiles.filter(p => p.chainId === 'solana').slice(0, 15).map(p => p.tokenAddress).join(',');
+                // Filter for Solana
+                const hotAddrs = [
+                    ...boostRes.slice(0, 5).map(b => b.tokenAddress),
+                    ...profileRes.filter(p => p.chainId === 'solana').slice(0, 10).map(p => p.tokenAddress)
+                ].join(',');
 
-                // 3. Broad Search Discovery
-                const queries = ['solana', 'meme', 'raydium', 'pump', 'moon'];
-                for (const q of queries) {
-                    loaderText.innerText = `Searching pool: ${q}...`;
-                    const res = await fetch(API.SEARCH(q));
-                    const data = await res.json();
-                    if (data.pairs) allPairs = [...allPairs, ...data.pairs];
-                }
+                const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${hotAddrs}`);
+                const data = await res.json();
+                if (data.pairs) allPairs = data.pairs;
 
-                // 4. Resolve address batches to get full pair data
-                const batches = [boostAddrs, profileAddrs].filter(a => a);
-                for (const b of batches) {
-                    const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${b}`);
-                    const data = await res.json();
-                    if (data.pairs) allPairs = [...allPairs, ...data.pairs];
-                }
+                // De-duplicate & Filter
+                const solPairs = allPairs.filter(p => p.chainId === 'solana' && (p.liquidity?.usd || 0) >= FILTERS.MIN_LIQUIDITY);
+                solPairs.sort((a, b) => (b.priceChange?.h24 || 0) - (a.priceChange?.h24 || 0));
 
-                // De-duplicate pairs
-                const uniquePairs = Array.from(new Map(allPairs.map(p => [p.pairAddress, p])).values());
-                statScanned.innerText = uniquePairs.length;
+                renderTokens(solPairs);
 
-                // Filter tokens
-                const explosiveTokens = uniquePairs.filter(pair => {
-                    if (pair.chainId !== 'solana') return false;
-                    const liq = pair.liquidity?.usd || 0;
-                    const h24 = pair.priceChange?.h24 || 0;
-
-                    return liq >= FILTERS.MIN_LIQUIDITY && h24 >= 10; // Loosened for visibility
-                });
-
-                explosiveTokens.sort((a, b) => (b.priceChange?.h24 || 0) - (a.priceChange?.h24 || 0));
-
-                const explosiveCount = explosiveTokens.filter(t => (t.priceChange?.h24 || 0) >= FILTERS.STRICT_GROWTH).length;
-                statExplosive.innerText = explosiveCount;
-
-                renderTokens(explosiveTokens);
-
-            } catch (error) {
-                console.error("Discovery error:", error);
-                tokenLoader.innerHTML = `<p style="color:red">Discovery Fail: ${error.message}. Please click Scan again.</p>`;
+            } catch (e) {
+                logToFeed(`Discovery error: ${e.message}`, 'error');
+                tokenBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--danger);">Scan Failed. Try again.</td></tr>';
             }
         }
 
         function renderTokens(tokens) {
-            tokenLoader.style.display = 'none';
-            tokenTable.style.display = 'table';
             tokenBody.innerHTML = '';
-
             if (tokens.length === 0) {
-                tokenBody.innerHTML = '<tr><td colspan="6" style="text-align:center">No active Solana pairs found with >$5k Liq. Try scanning again.</td></tr>';
+                tokenBody.innerHTML = '<tr><td colspan="5" style="text-align:center">No active pairs found.</td></tr>';
                 return;
             }
 
@@ -541,134 +542,127 @@
 
                 tr.innerHTML = `
                     <td>
-                        <div class="token-info">
-                            <div class="token-name">${token.baseToken.name}</div>
-                            <div class="token-symbol">${token.baseToken.symbol}</div>
-                        </div>
+                        <div style="font-weight:700">${token.baseToken.name}</div>
+                        <div style="font-size:0.7rem; color:var(--text-secondary)">${token.baseToken.symbol}</div>
                     </td>
                     <td>
-                        <span class="${h24 >= 0 ? 'up' : 'down'}">
-                            ${h24.toFixed(2)}%
-                        </span>
+                        <div class="${h24 >= 0 ? 'up' : 'down'}">${h24.toFixed(2)}%</div>
+                        <div style="font-size:0.7rem">$${token.priceUsd}</div>
                     </td>
                     <td>$${(token.liquidity?.usd || 0).toLocaleString()}</td>
-                    <td>$${(token.volume?.h24 || 0).toLocaleString()}</td>
+                    <td><span id="v-${token.pairAddress}" class="badge badge-rpc">PENDING...</span></td>
                     <td>
-                        <span class="badge ${isExtreme ? 'badge-success' : 'badge-warning'}">
-                            ${isExtreme ? 'EXPLOSIVE (1000%+)' : 'TRENDING'}
-                        </span>
-                    </td>
-                    <td>
-                        <button class="refresh-btn" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="analyzeWallet('${token.pairAddress}', '${token.baseToken.name}')">
-                            Analyze Smart Money
+                        <button class="refresh-btn" style="padding:4px 8px; font-size:0.7rem" onclick="verifyAndAnalyze('${token.pairAddress}', '${token.baseToken.name}', '${token.baseToken.address}')">
+                            VERIFY
                         </button>
                     </td>
                 `;
                 tokenBody.appendChild(tr);
+
+                // Automatic background verification
+                verifyOnChain(token.pairAddress, token.baseToken.address);
             });
         }
 
-        async function analyzeWallet(pairAddr, tokenName) {
-            walletSection.style.display = 'block';
-            walletLoader.style.display = 'flex';
-            walletTable.style.display = 'none';
-            walletBody.innerHTML = '';
-            analyzedTokenName.innerText = tokenName;
+        async function verifyOnChain(pairAddr, mintAddr) {
+            if (!connection) return;
+            try {
+                const badge = document.getElementById(`v-${pairAddr}`);
+                const bal = await connection.getAccountInfo(new PublicKey(pairAddr));
+                if (bal) {
+                    badge.innerText = "VERIFIED";
+                    badge.style.color = "var(--success)";
+                    badge.style.background = "rgba(0, 255, 189, 0.1)";
+                    logToFeed(`Verified Pool Storage: ${pairAddr.substring(0, 6)}...`, 'info');
+                }
+            } catch (e) { }
+        }
 
+        async function verifyAndAnalyze(pairAddr, tokenName, mintAddr) {
+            walletSection.style.display = 'block';
+            walletBody.innerHTML = '<tr><td colspan="5" class="loader"><div class="spinner"></div></td></tr>';
             walletSection.scrollIntoView({ behavior: 'smooth' });
 
             try {
+                logToFeed(`Running RPC Audit for ${tokenName}...`);
                 const url = API.TOP_TRADERS(pairAddr);
-                const data = await fetchProxy(url);
+                const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+                const json = await res.json();
+                const data = JSON.parse(json.contents);
 
-                if (!data || !data.traders) throw new Error("Could not fetch trader data.");
+                if (!data.traders) throw new Error("No logs");
 
-                const top30 = (data.traders || []).slice(0, 30);
-                renderWallets(top30);
-
-            } catch (error) {
-                console.error("Wallet analysis error:", error);
-                walletLoader.innerHTML = `<p style="color:red">Analysis Error: ${error.message}
-                <br><br><small>This usually happens if the CORS proxy is busy. Please try again in 5 seconds.</small></p>`;
+                const top30 = data.traders.slice(0, 30);
+                renderWallets(top30, mintAddr);
+            } catch (e) {
+                walletBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--danger);">Audit failed. RPC or Proxy error.</td></tr>';
             }
         }
 
-        function renderWallets(traders) {
-            walletLoader.style.display = 'none';
-            walletTable.style.display = 'table';
+        async function renderWallets(traders, mintAddr) {
             walletBody.innerHTML = '';
 
-            if (traders.length === 0) {
-                walletBody.innerHTML = '<tr><td colspan="6" style="text-align:center">No smart money data found for this pair.</td></tr>';
-                return;
-            }
-
-            let smartCount = 0;
-            traders.forEach((t, index) => {
+            for (const [index, t] of traders.entries()) {
                 const tr = document.createElement('tr');
                 const profit = t.pnl || 0;
                 const buyUsd = t.boughtUsd || 0;
-                const sellUsd = t.soldUsd || 0;
-
                 const profitPct = buyUsd > 0 ? ((profit / buyUsd) * 100).toFixed(0) : "0";
-                const isProfitableBuyer = buyUsd > 0 && profit > 0;
-                const isElite = isProfitableBuyer && profitPct >= 500;
+                const isElite = profitPct >= 500 && profit > 0;
 
-                if (isElite) {
-                    tr.classList.add('elite-wallet');
-                    smartCount++;
-                }
+                if (isElite) tr.className = 'elite-wallet';
+
+                // Real-time on-chain balance check (if RPC works)
+                let rpcLabel = "Checking...";
+                try {
+                    if (connection) {
+                        const bal = await connection.getBalance(new PublicKey(t.maker));
+                        rpcLabel = (bal / 1e9).toFixed(2) + " SOL";
+                    }
+                } catch (e) { rpcLabel = "Error"; }
 
                 tr.innerHTML = `
                     <td>#${index + 1}</td>
-                    <td style="font-family: monospace;">
-                        <a href="https://solscan.io/account/${t.maker}" target="_blank" class="${isElite ? 'highlight-address' : ''}" style="color: ${isElite ? '#ffd700' : 'var(--accent-color)'}; text-decoration: none;">
+                    <td style="font-family:monospace">
+                        <a href="https://solscan.io/account/${t.maker}" target="_blank" style="color:var(--accent-color); text-decoration:none">
                             ${t.maker.substring(0, 4)}...${t.maker.substring(t.maker.length - 4)}
                         </a>
                     </td>
-                    <td class="${profit >= 0 ? 'up' : 'down'}">
-                        $${profit.toLocaleString()} 
-                        <span style="font-size: 0.7rem; opacity: 0.8;">(${profitPct}%)</span>
-                    </td>
-                    <td>$${buyUsd.toLocaleString()}</td>
-                    <td>$${sellUsd.toLocaleString()}</td>
-                    <td><span class="badge ${isElite ? 'badge-success' : 'badge-info'}">${isElite ? 'ELITE BUYER' : 'TRADER'}</span></td>
+                    <td class="${profit >= 0 ? 'up' : 'down'}">$${profit.toLocaleString()} (${profitPct}%)</td>
+                    <td id="b-${t.maker}">${rpcLabel}</td>
+                    <td><span class="badge ${isElite ? 'badge-success' : 'badge-rpc'}">${isElite ? 'ELITE' : 'ACTIVE'}</span></td>
                 `;
                 walletBody.appendChild(tr);
-            });
-            statSmart.innerText = smartCount;
-        }
-
-        async function scanCa() {
-            const ca = caInput.value.trim();
-            if (!ca) return;
-
-            tokenLoader.style.display = 'flex';
-            tokenTable.style.display = 'none';
-            loaderText.innerText = `Fetching data for CA: ${ca}...`;
-
-            try {
-                const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${ca}`);
-                const data = await res.json();
-
-                if (!data.pairs || data.pairs.length === 0) {
-                    throw new Error("No pairs found for this CA.");
-                }
-
-                const solPairs = data.pairs.filter(p => p.chainId === 'solana');
-                if (solPairs.length === 0) throw new Error("This CA is not on Solana.");
-
-                renderTokens(solPairs);
-            } catch (error) {
-                console.error("CA Scan Error:", error);
-                tokenLoader.innerHTML = `<p style="color:red">CA Scan Failed: ${error.message}</p>`;
             }
         }
 
-        refreshBtn.addEventListener('click', fetchTokens);
-        scanCaBtn.addEventListener('click', scanCa);
-        caInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') scanCa(); });
+        async function scanCa() {
+            const ca = document.getElementById('ca-input').value.trim();
+            if (!ca) return;
+
+            tokenBody.innerHTML = '<tr><td colspan="5" class="loader"><div class="spinner"></div></td></tr>';
+            try {
+                logToFeed(`On-Chain Probe: Scanning ${ca}...`, 'info');
+                const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${ca}`);
+                const data = await res.json();
+                if (data.pairs) renderTokens(data.pairs.filter(p => p.chainId === 'solana'));
+            } catch (e) { logToFeed(`CA Scan Error`, 'error'); }
+        }
+
+        // Initialize
+        document.getElementById('refresh-btn').addEventListener('click', fetchTokens);
+        document.getElementById('scan-ca-btn').addEventListener('click', scanCa);
+        rpcInput.addEventListener('change', initRPC);
+
+        initRPC();
         fetchTokens();
+
+        // Interval updates
+        setInterval(async () => {
+            if (connection) {
+                const h = await connection.getBlockHeight();
+                statHeight.innerText = h.toLocaleString();
+            }
+        }, 5000);
     </script>
 </body>
 
