@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -51,6 +52,7 @@
             font-size: 1.8rem;
             background: linear-gradient(45deg, var(--accent-color), var(--secondary-accent));
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
             font-weight: 800;
             letter-spacing: -1px;
@@ -83,17 +85,6 @@
             border-color: var(--accent-color);
         }
 
-        .stat-card::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 100px;
-            height: 100px;
-            background: radial-gradient(circle, rgba(0, 242, 255, 0.05) 0%, transparent 70%);
-            pointer-events: none;
-        }
-
         .stat-header {
             display: flex;
             justify-content: space-between;
@@ -114,8 +105,13 @@
             gap: 4px;
         }
 
-        .up { color: var(--success); }
-        .down { color: var(--danger); }
+        .up {
+            color: var(--success);
+        }
+
+        .down {
+            color: var(--danger);
+        }
 
         .main-content {
             display: grid;
@@ -181,13 +177,6 @@
             gap: 12px;
         }
 
-        .token-icon {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: #333;
-        }
-
         .token-name {
             font-weight: 600;
         }
@@ -204,8 +193,20 @@
             font-weight: 600;
         }
 
-        .badge-success { background: rgba(0, 255, 189, 0.1); color: var(--success); }
-        .badge-info { background: rgba(0, 242, 255, 0.1); color: var(--accent-color); }
+        .badge-success {
+            background: rgba(0, 255, 189, 0.1);
+            color: var(--success);
+        }
+
+        .badge-info {
+            background: rgba(0, 242, 255, 0.1);
+            color: var(--accent-color);
+        }
+
+        .badge-warning {
+            background: rgba(255, 165, 0, 0.1);
+            color: #ffa500;
+        }
 
         .loader {
             display: flex;
@@ -240,32 +241,61 @@
             transition: opacity 0.3s;
         }
 
-        .refresh-btn:hover { opacity: 0.9; }
+        .refresh-btn:hover {
+            opacity: 0.9;
+        }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         /* Mobile Adjustments */
         @media (max-width: 768px) {
-            .container { padding: 1rem; }
-            .stat-value { font-size: 1.5rem; }
-            th:nth-child(4), td:nth-child(4),
-            th:nth-child(5), td:nth-child(5) { display: none; }
+            .container {
+                padding: 1rem;
+            }
+
+            .stat-value {
+                font-size: 1.5rem;
+            }
+
+            th:nth-child(4),
+            td:nth-child(4),
+            th:nth-child(5),
+            td:nth-child(5) {
+                display: none;
+            }
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <header>
             <div class="logo-section">
                 <h1>ANALYTICS ENGINE</h1>
                 <p>Solana Memecoin & Smart Money Tracker</p>
+            </div>
+            <div class="search-container" style="display: flex; gap: 10px; flex: 1; max-width: 400px; margin: 0 2rem;">
+                <input type="text" id="ca-input" placeholder="Paste Solana CA..."
+                    style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: white; padding: 0.8rem; border-radius: 12px; flex: 1; font-family: monospace;">
+                <button class="refresh-btn" id="scan-ca-btn" style="padding: 0.8rem; aspect-ratio: 1/1;">
+                    <i data-lucide="search"></i>
+                </button>
             </div>
             <button class="refresh-btn" id="refresh-btn">
                 <i data-lucide="refresh-cw"></i> Scan Market
@@ -307,16 +337,16 @@
                 <div class="data-table-container" id="token-table-container">
                     <div class="loader" id="token-loader">
                         <div class="spinner"></div>
-                        <p>Scanning Dexscreener for explosive Solana pairs...</p>
+                        <p id="loader-text">Initializing scan...</p>
                     </div>
                     <table id="token-table" style="display: none;">
                         <thead>
                             <tr>
                                 <th>Token</th>
-                                <th>Price Change (24h/48h)</th>
+                                <th>Price Change (24h)</th>
                                 <th>Liquidity</th>
                                 <th>Volume (24h)</th>
-                                <th>Status</th>
+                                <th>Growth Type</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
@@ -357,68 +387,89 @@
         const FILTERS = {
             CHAIN: 'solana',
             MIN_LIQUIDITY: 5000,
-            MIN_GROWTH: 3000, // %
-            TIME_WINDOW: '48h'
+            STRICT_GROWTH: 3000,
+            TRENDING_GROWTH: 50, // Fallback to show trending if 3000% is empty
         };
 
         const API = {
-            PAIRS: 'https://api.dexscreener.com/latest/dex/search/?q=solana',
-            TOP_TRADERS: (pairAddr) => `https://io.dexscreener.com/dex/log/top-traders/v2/solana/${pairAddr}`
+            SEARCH: (q) => `https://api.dexscreener.com/latest/dex/search/?q=${q}`,
+            LATEST: 'https://api.dexscreener.com/token-profiles/latest/v1',
+            TOP_TRADERS: (pairAddr) => `https://io.dexscreener.com/dex/log/top-traders/v2/solana/${pairAddr}`,
+            PROXY: (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`
         };
 
         // DOM Elements
         const refreshBtn = document.getElementById('refresh-btn');
+        const scanCaBtn = document.getElementById('scan-ca-btn');
+        const caInput = document.getElementById('ca-input');
         const tokenTable = document.getElementById('token-table');
         const tokenBody = document.getElementById('token-body');
         const tokenLoader = document.getElementById('token-loader');
+        const loaderText = document.getElementById('loader-text');
         const walletSection = document.getElementById('wallet-section');
         const walletTable = document.getElementById('wallet-table');
         const walletBody = document.getElementById('wallet-body');
         const walletLoader = document.getElementById('wallet-loader');
         const analyzedTokenName = document.getElementById('analyzing-token-name');
 
-        // Stats elements
         const statScanned = document.getElementById('stat-scanned');
         const statExplosive = document.getElementById('stat-explosive');
         const statSmart = document.getElementById('stat-smart');
 
-        // Initialize Lucide icons
         lucide.createIcons();
+
+        // Helper to fetch through proxy
+        async function fetchProxy(url) {
+            const res = await fetch(API.PROXY(url));
+            const data = await res.json();
+            return JSON.parse(data.contents);
+        }
 
         async function fetchTokens() {
             tokenLoader.style.display = 'flex';
             tokenTable.style.display = 'none';
             walletSection.style.display = 'none';
-            
-            try {
-                // Since there's no direct "top gainers 48h" search, we fetch a bunch of Solana tokens
-                // and filter them. In a real scenario, we might iterate through multiple chunks.
-                const response = await fetch(API.PAIRS);
-                const data = await response.json();
-                
-                if (!data.pairs) throw new Error("No pairs found");
+            loaderText.innerText = "Discovering Solana pairs across categories...";
 
-                statScanned.innerText = data.pairs.length;
+            try {
+                // Multi-query search strategy to sweep more pairs
+                const queries = ['solana', 'meme', 'pump', 'moon', 'ai', 'dog'];
+                let allPairs = [];
+
+                for (const q of queries) {
+                    loaderText.innerText = `Searching pool: ${q}...`;
+                    const res = await fetch(API.SEARCH(q));
+                    const data = await res.json();
+                    if (data.pairs) {
+                        allPairs = [...allPairs, ...data.pairs];
+                    }
+                }
+
+                // De-duplicate pairs
+                const uniquePairs = Array.from(new Map(allPairs.map(p => [p.pairAddress, p])).values());
+                statScanned.innerText = uniquePairs.length;
 
                 // Filter tokens
-                const explosiveTokens = data.pairs.filter(pair => {
+                const explosiveTokens = uniquePairs.filter(pair => {
+                    if (pair.chainId !== 'solana') return false;
                     const liq = pair.liquidity?.usd || 0;
-                    const h24Change = pair.priceChange?.h24 || 0;
-                    const h6Change = pair.priceChange?.h6 || 0;
-                    
-                    // Note: Public API doesn't always provide h48 directly. 
-                    // We simulate high growth check using 24h as a proxy if h48 isn't there, 
-                    // or flag for user review. For this demo, we'll use a lower threshold 
-                    // if necessary to show data, but try to find the actual big movers.
-                    return liq >= FILTERS.MIN_LIQUIDITY && (h24Change >= 100 || h6Change >= 50);
+                    const h24 = pair.priceChange?.h24 || 0;
+                    const h6 = pair.priceChange?.h6 || 0;
+
+                    return liq >= FILTERS.MIN_LIQUIDITY && (h24 >= FILTERS.TRENDING_GROWTH || h6 >= 20);
                 });
 
-                statExplosive.innerText = explosiveTokens.length;
+                // Sort by growth
+                explosiveTokens.sort((a, b) => (b.priceChange?.h24 || 0) - (a.priceChange?.h24 || 0));
+
+                const explosiveCount = explosiveTokens.filter(t => (t.priceChange?.h24 || 0) >= FILTERS.STRICT_GROWTH).length;
+                statExplosive.innerText = explosiveCount;
+
                 renderTokens(explosiveTokens);
-                
+
             } catch (error) {
-                console.error("Fetch error:", error);
-                tokenLoader.innerHTML = `<p style="color:red">Error loading data: ${error.message}</p>`;
+                console.error("Discovery error:", error);
+                tokenLoader.innerHTML = `<p style="color:red">Discovery Fail: ${error.message}</p>`;
             }
         }
 
@@ -428,14 +479,15 @@
             tokenBody.innerHTML = '';
 
             if (tokens.length === 0) {
-                tokenBody.innerHTML = '<tr><td colspan="6" style="text-align:center">No tokens matching 3000% 48h + $5k Liq found currently. Try again later.</td></tr>';
+                tokenBody.innerHTML = '<tr><td colspan="6" style="text-align:center">No active Solana pairs found with >$5k Liq. Try scanning again.</td></tr>';
                 return;
             }
 
             tokens.forEach(token => {
                 const tr = document.createElement('tr');
-                const priceChange = token.priceChange?.h24 || 0;
-                
+                const h24 = token.priceChange?.h24 || 0;
+                const isExtreme = h24 >= FILTERS.STRICT_GROWTH;
+
                 tr.innerHTML = `
                     <td>
                         <div class="token-info">
@@ -444,16 +496,20 @@
                         </div>
                     </td>
                     <td>
-                        <span class="${priceChange >= 0 ? 'up' : 'down'}">
-                            ${priceChange.toFixed(2)}% (24h)
+                        <span class="${h24 >= 0 ? 'up' : 'down'}">
+                            ${h24.toFixed(2)}%
                         </span>
                     </td>
                     <td>$${(token.liquidity?.usd || 0).toLocaleString()}</td>
                     <td>$${(token.volume?.h24 || 0).toLocaleString()}</td>
-                    <td><span class="badge badge-success">High Growth</span></td>
+                    <td>
+                        <span class="badge ${isExtreme ? 'badge-success' : 'badge-warning'}">
+                            ${isExtreme ? 'EXPLOSIVE (3000%+)' : 'TRENDING'}
+                        </span>
+                    </td>
                     <td>
                         <button class="refresh-btn" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="analyzeWallet('${token.pairAddress}', '${token.baseToken.name}')">
-                            Analyze Wallets
+                            Analyze Smart Money
                         </button>
                     </td>
                 `;
@@ -465,30 +521,29 @@
             walletSection.style.display = 'block';
             walletLoader.style.display = 'flex';
             walletTable.style.display = 'none';
+            walletBody.innerHTML = '';
             analyzedTokenName.innerText = tokenName;
-            
-            // Scroll to section
+
             walletSection.scrollIntoView({ behavior: 'smooth' });
 
             try {
-                // FETCHING TOP TRADERS
-                // Note: Dexscreener's io.dexscreener.com is sometimes CORS restricted.
-                // In a browser environment, we might need to handle this.
-                const response = await fetch(API.TOP_TRADERS(pairAddr));
-                const data = await response.json();
-                
-                // Process top 30 wallets
+                // Using PROXY to bypass CORS for internal dexscreener endpoint
+                const url = API.TOP_TRADERS(pairAddr);
+                const data = await fetchProxy(url);
+
                 const top30 = (data.traders || []).slice(0, 30);
-                
-                // Filter those with > 500% profit (simulated check as PnL is usually in USD)
-                // We'll calculate profit % or just show total PnL
+
+                // Calculate "Smart Money" count (Profit > 500%)
+                // Note: Indexing PnL as absolute USD, checking if we can derive % or just count winners
+                const smartCount = top30.filter(t => t.pnl > 0).length;
+                statSmart.innerText = smartCount;
+
                 renderWallets(top30);
-                statSmart.innerText = top30.length;
 
             } catch (error) {
                 console.error("Wallet analysis error:", error);
-                walletLoader.innerHTML = `<p style="color:red">CORS or API Error: Cannot fetch top traders directly from browser for this pair. 
-                <br><br><small>Note: Dexscreener internal API often prevents direct browser access without a proxy.</small></p>`;
+                walletLoader.innerHTML = `<p style="color:red">Analysis Error: ${error.message}
+                <br><br><small>This usually happens if the CORS proxy is busy or the token is too new for trader logs.</small></p>`;
             }
         }
 
@@ -498,32 +553,71 @@
             walletBody.innerHTML = '';
 
             if (traders.length === 0) {
-                walletBody.innerHTML = '<tr><td colspan="6" style="text-align:center">No smart money data available for this token.</td></tr>';
+                walletBody.innerHTML = '<tr><td colspan="6" style="text-align:center">No smart money data found for this pair.</td></tr>';
                 return;
             }
 
             traders.forEach((t, index) => {
                 const tr = document.createElement('tr');
                 const profit = t.pnl || 0;
-                const buyAmount = t.boughtAmount || 0;
-                const sellAmount = t.soldAmount || 0;
-                
+                const buyUsd = t.boughtUsd || 0;
+                const sellUsd = t.soldUsd || 0;
+
+                // Profit % calculation if possible
+                const profitPct = buyUsd > 0 ? ((profit / buyUsd) * 100).toFixed(0) : "0";
+                const isSmart = profitPct >= 500;
+
                 tr.innerHTML = `
                     <td>#${index + 1}</td>
-                    <td style="font-family: monospace;">${t.maker.substring(0, 6)}...${t.maker.substring(t.maker.length - 4)}</td>
-                    <td class="${profit >= 0 ? 'up' : 'down'}">$${profit.toLocaleString()}</td>
-                    <td>${buyAmount.toLocaleString()}</td>
-                    <td>${sellAmount.toLocaleString()}</td>
-                    <td><span class="badge badge-info">Smart Wallet</span></td>
+                    <td style="font-family: monospace;">
+                        <a href="https://solscan.io/account/${t.maker}" target="_blank" style="color: var(--accent-color); text-decoration: none;">
+                            ${t.maker.substring(0, 4)}...${t.maker.substring(t.maker.length - 4)}
+                        </a>
+                    </td>
+                    <td class="${profit >= 0 ? 'up' : 'down'}">
+                        $${profit.toLocaleString()} 
+                        <span style="font-size: 0.7rem; opacity: 0.8;">(${profitPct}%)</span>
+                    </td>
+                    <td>$${buyUsd.toLocaleString()}</td>
+                    <td>$${sellUsd.toLocaleString()}</td>
+                    <td><span class="badge ${isSmart ? 'badge-success' : 'badge-info'}">${isSmart ? 'ULTRA SMART' : 'SMART'}</span></td>
                 `;
                 walletBody.appendChild(tr);
             });
         }
 
-        refreshBtn.addEventListener('click', fetchTokens);
+        async function scanCa() {
+            const ca = caInput.value.trim();
+            if (!ca) return;
 
-        // Initial fetch
+            tokenLoader.style.display = 'flex';
+            tokenTable.style.display = 'none';
+            loaderText.innerText = `Fetching data for CA: ${ca}...`;
+
+            try {
+                const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${ca}`);
+                const data = await res.json();
+
+                if (!data.pairs || data.pairs.length === 0) {
+                    throw new Error("No pairs found for this CA.");
+                }
+
+                // Filter for Solana pairs if multiple found
+                const solPairs = data.pairs.filter(p => p.chainId === 'solana');
+                if (solPairs.length === 0) throw new Error("This CA is not on Solana.");
+
+                renderTokens(solPairs);
+            } catch (error) {
+                console.error("CA Scan Error:", error);
+                tokenLoader.innerHTML = `<p style="color:red">CA Scan Failed: ${error.message}</p>`;
+            }
+        }
+
+        refreshBtn.addEventListener('click', fetchTokens);
+        scanCaBtn.addEventListener('click', scanCa);
+        caInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') scanCa(); });
         fetchTokens();
     </script>
 </body>
+
 </html>
