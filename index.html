@@ -208,6 +208,18 @@
             color: #ffa500;
         }
 
+        .elite-wallet {
+            border: 1px solid #ffd700;
+            background: rgba(255, 215, 0, 0.05) !important;
+            box-shadow: inset 0 0 10px rgba(255, 215, 0, 0.1);
+        }
+
+        .highlight-address {
+            color: #ffd700 !important;
+            font-weight: 700;
+            text-shadow: 0 0 5px rgba(255, 215, 0, 0.3);
+        }
+
         .loader {
             display: flex;
             flex-direction: column;
@@ -313,7 +325,7 @@
             </div>
             <div class="stat-card">
                 <div class="stat-header">
-                    <span>Explosive Tokens (>3000%)</span>
+                    <span>Explosive Tokens (>1000%)</span>
                     <i data-lucide="zap"></i>
                 </div>
                 <div class="stat-value" id="stat-explosive">0</div>
@@ -387,8 +399,8 @@
         const FILTERS = {
             CHAIN: 'solana',
             MIN_LIQUIDITY: 5000,
-            STRICT_GROWTH: 3000,
-            TRENDING_GROWTH: 50, // Fallback to show trending if 3000% is empty
+            STRICT_GROWTH: 1000,
+            TRENDING_GROWTH: 50, // Fallback to show trending if 1000% is empty
         };
 
         const API = {
@@ -504,7 +516,7 @@
                     <td>$${(token.volume?.h24 || 0).toLocaleString()}</td>
                     <td>
                         <span class="badge ${isExtreme ? 'badge-success' : 'badge-warning'}">
-                            ${isExtreme ? 'EXPLOSIVE (3000%+)' : 'TRENDING'}
+                            ${isExtreme ? 'EXPLOSIVE (1000%+)' : 'TRENDING'}
                         </span>
                     </td>
                     <td>
@@ -563,14 +575,19 @@
                 const buyUsd = t.boughtUsd || 0;
                 const sellUsd = t.soldUsd || 0;
 
-                // Profit % calculation if possible
+                // Profit % calculation
                 const profitPct = buyUsd > 0 ? ((profit / buyUsd) * 100).toFixed(0) : "0";
-                const isSmart = profitPct >= 500;
+
+                // HIGHLIGHT LOGIC: Bought and made profit
+                const isProfitableBuyer = buyUsd > 0 && profit > 0;
+                const isElite = isProfitableBuyer && profitPct >= 500;
+
+                if (isElite) tr.classList.add('elite-wallet');
 
                 tr.innerHTML = `
                     <td>#${index + 1}</td>
                     <td style="font-family: monospace;">
-                        <a href="https://solscan.io/account/${t.maker}" target="_blank" style="color: var(--accent-color); text-decoration: none;">
+                        <a href="https://solscan.io/account/${t.maker}" target="_blank" class="${isElite ? 'highlight-address' : ''}" style="color: ${isElite ? '#ffd700' : 'var(--accent-color)'}; text-decoration: none;">
                             ${t.maker.substring(0, 4)}...${t.maker.substring(t.maker.length - 4)}
                         </a>
                     </td>
@@ -580,7 +597,7 @@
                     </td>
                     <td>$${buyUsd.toLocaleString()}</td>
                     <td>$${sellUsd.toLocaleString()}</td>
-                    <td><span class="badge ${isSmart ? 'badge-success' : 'badge-info'}">${isSmart ? 'ULTRA SMART' : 'SMART'}</span></td>
+                    <td><span class="badge ${isElite ? 'badge-success' : 'badge-info'}">${isElite ? 'ELITE BUYER' : 'TRADER'}</span></td>
                 `;
                 walletBody.appendChild(tr);
             });
