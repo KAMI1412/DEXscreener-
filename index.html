@@ -4,21 +4,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Solana On-Chain Analyzer | RPC Engine</title>
+    <title>Solana Memecoin Analyzer | Pro Edition</title>
     <!-- Dependencies -->
     <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.87.6/lib/index.iife.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         :root {
-            --bg-color: #0a0b0d;
-            --card-bg: #16181c;
+            --bg-color: #030508;
+            --card-bg: #0d1117;
             --accent-color: #00f2ff;
             --secondary-accent: #7000ff;
             --text-primary: #ffffff;
-            --text-secondary: #a0a0a0;
-            --success: #00ffbd;
-            --danger: #ff4d4d;
+            --text-secondary: #8b949e;
+            --success: #39d353;
+            --danger: #ff4444;
             --glass-border: rgba(255, 255, 255, 0.1);
         }
 
@@ -26,14 +25,14 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-family: 'Inter', -apple-system, system-ui, sans-serif;
         }
 
         body {
             background-color: var(--bg-color);
             color: var(--text-primary);
-            overflow-x: hidden;
             min-height: 100vh;
+            overflow-x: hidden;
         }
 
         .container {
@@ -42,228 +41,199 @@
             padding: 2rem;
         }
 
+        /* Premium Header */
         header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 2rem;
-            animation: fadeIn 0.8s ease-out;
+            margin-bottom: 2.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--glass-border);
         }
 
-        .logo-section h1 {
-            font-size: 1.8rem;
-            background: linear-gradient(45deg, var(--accent-color), var(--secondary-accent));
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
+        .brand h1 {
+            font-size: 2rem;
             font-weight: 800;
+            background: linear-gradient(to right, var(--accent-color), var(--secondary-accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
             letter-spacing: -1px;
         }
 
-        .logo-section p {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-        }
-
-        /* Toolbar & RPC Settings */
-        .toolbar {
-            display: flex;
-            gap: 1rem;
-            align-items: center;
-            background: rgba(22, 24, 28, 0.8);
-            backdrop-filter: blur(10px);
-            padding: 1rem;
-            border-radius: 12px;
-            border: 1px solid var(--glass-border);
-            margin-bottom: 2rem;
-        }
-
-        .rpc-config {
-            display: flex;
-            gap: 0.5rem;
-            flex: 1;
-        }
-
-        .rpc-config input {
-            background: rgba(0, 0, 0, 0.2);
-            border: 1px solid var(--glass-border);
-            color: #00ffbd;
-            padding: 0.6rem;
-            border-radius: 8px;
-            flex: 1;
-            font-size: 0.8rem;
-            font-family: monospace;
-        }
-
+        /* Stats Grid */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 1.5rem;
-            margin-bottom: 2rem;
+            margin-bottom: 2.5rem;
         }
 
         .stat-card {
             background: var(--card-bg);
             border: 1px solid var(--glass-border);
             padding: 1.5rem;
-            border-radius: 16px;
-            transition: transform 0.3s ease;
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent-color), transparent);
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stat-val {
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin-top: 0.5rem;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 300px;
             position: relative;
         }
 
-        .stat-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.5rem;
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-        }
-
-        .stat-value {
-            font-size: 1.8rem;
-            font-weight: 700;
-        }
-
-        .main-grid {
-            display: grid;
-            grid-template-columns: 1fr 350px;
-            gap: 2rem;
-        }
-
-        .data-table-container {
+        .search-box input {
+            width: 100%;
             background: var(--card-bg);
             border: 1px solid var(--glass-border);
-            border-radius: 16px;
-            overflow: hidden;
-            height: fit-content;
+            padding: 0.8rem 1rem;
+            border-radius: 8px;
+            color: white;
+            font-family: monospace;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, var(--accent-color), var(--secondary-accent));
+            border: none;
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: 0.2s;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        /* Tables */
+        .section {
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            text-align: left;
         }
 
         th {
+            text-align: left;
             padding: 1rem;
-            background: rgba(255, 255, 255, 0.03);
-            color: var(--text-secondary);
             font-size: 0.75rem;
+            color: var(--text-secondary);
             text-transform: uppercase;
-            letter-spacing: 1px;
+            border-bottom: 1px solid var(--glass-border);
         }
 
         td {
             padding: 1rem;
-            border-bottom: 1px solid var(--glass-border);
-            font-size: 0.9rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.95rem;
+        }
+
+        .up {
+            color: var(--success);
+        }
+
+        .down {
+            color: var(--danger);
         }
 
         .badge {
             padding: 4px 8px;
-            border-radius: 6px;
+            border-radius: 4px;
             font-size: 0.7rem;
-            font-weight: 700;
+            font-weight: 800;
         }
 
-        .badge-success {
-            background: rgba(0, 255, 189, 0.1);
+        .badge-explosive {
+            background: rgba(57, 211, 83, 0.1);
             color: var(--success);
+            border: 1px solid var(--success);
         }
 
-        .badge-warning {
-            background: rgba(255, 165, 0, 0.1);
-            color: #ffa500;
-        }
-
-        .badge-rpc {
+        .badge-trending {
             background: rgba(0, 242, 255, 0.1);
             color: var(--accent-color);
         }
 
-        .elite-wallet {
-            background: rgba(255, 215, 0, 0.05) !important;
-            border-left: 3px solid #ffd700;
+        .badge-pnl {
+            background: rgba(255, 215, 0, 0.1);
+            color: #ffd700;
         }
 
-        /* Live Feed */
-        .live-feed {
-            background: var(--card-bg);
-            border: 1px solid var(--glass-border);
-            border-radius: 16px;
-            padding: 1rem;
-            height: 600px;
-            display: flex;
-            flex-direction: column;
+        .elite-row {
+            background: rgba(255, 215, 0, 0.03);
         }
 
-        .feed-header {
-            font-weight: 700;
-            font-size: 1.1rem;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: var(--accent-color);
-        }
-
-        #feed-content {
-            flex: 1;
-            overflow-y: auto;
-            font-family: monospace;
-            font-size: 0.8rem;
-        }
-
-        .feed-item {
-            padding: 8px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            animation: slideIn 0.3s ease-out;
-        }
-
-        .feed-item .time {
-            color: var(--text-secondary);
-            margin-right: 8px;
-        }
-
-        .feed-item .msg {
-            color: #fff;
-        }
-
-        .feed-item .tag {
-            color: var(--success);
-            font-weight: 700;
-        }
-
-        .loader {
+        /* Loader */
+        .loader-overlay {
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            padding: 4rem;
+            padding: 3rem;
         }
 
         .spinner {
-            width: 30px;
-            height: 30px;
-            border: 2px solid rgba(255, 255, 255, 0.1);
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
             border-top-color: var(--accent-color);
             border-radius: 50%;
             animation: spin 1s linear infinite;
-        }
-
-        .refresh-btn {
-            background: linear-gradient(45deg, var(--accent-color), var(--secondary-accent));
-            border: none;
-            color: white;
-            padding: 0.6rem 1.2rem;
-            border-radius: 10px;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.85rem;
         }
 
         @keyframes spin {
@@ -272,42 +242,55 @@
             }
         }
 
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
+        /* Real-time Indicators */
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--success);
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            box-shadow: 0 0 10px var(--success);
+            animation: pulse 1.5s infinite;
+        }
 
-            to {
+        @keyframes pulse {
+            0% {
                 opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateX(-10px);
             }
 
-            to {
+            50% {
+                opacity: 0.4;
+            }
+
+            100% {
                 opacity: 1;
-                transform: translateX(0);
             }
         }
 
-        /* Scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
+        /* Sidebar Like Feed */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 2rem;
         }
 
-        ::-webkit-scrollbar-track {
-            background: transparent;
+        .feed-box {
+            height: 600px;
+            overflow-y: auto;
+            background: #0d1117;
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 1rem;
+            font-family: monospace;
+            font-size: 0.8rem;
         }
 
-        ::-webkit-scrollbar-thumb {
-            background: var(--glass-border);
-            border-radius: 10px;
+        .feed-item {
+            border-left: 2px solid var(--accent-color);
+            padding: 0.5rem 0.8rem;
+            margin-bottom: 0.5rem;
+            background: rgba(255, 255, 255, 0.02);
         }
     </style>
 </head>
@@ -315,101 +298,87 @@
 <body>
     <div class="container">
         <header>
-            <div class="logo-section">
-                <h1>ON-CHAIN BATTLESTATION</h1>
-                <p>Real-Time Solana RPC Insights & Token Discovery</p>
+            <div class="brand">
+                <h1>DEX RADAR</h1>
+                <p>Advanced Solana Market Indexer</p>
             </div>
-            <div class="search-container" style="display: flex; gap: 10px; max-width: 400px; flex: 1; margin: 0 1rem;">
-                <input type="text" id="ca-input" placeholder="Solana CA Scan..."
-                    style="background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); color: white; padding: 0.7rem; border-radius: 10px; flex: 1; font-family: monospace;">
-                <button class="refresh-btn" id="scan-ca-btn">Scan</button>
+            <div class="controls">
+                <div class="search-box">
+                    <input type="text" id="ca-input" placeholder="Enter Contract Address (CA) to scan...">
+                </div>
+                <button class="btn" id="scan-btn">
+                    <i data-lucide="crosshair"></i> Audit CA
+                </button>
+                <button class="btn" id="refresh-btn">
+                    <i data-lucide="refresh-cw"></i> Rescan Market
+                </button>
             </div>
-            <button class="refresh-btn" id="refresh-btn">
-                <i data-lucide="zap"></i> Quick Scan
-            </button>
         </header>
-
-        <div class="toolbar">
-            <div class="rpc-config">
-                <span style="font-size: 0.75rem; color: var(--text-secondary); align-self: center;">SOLANA RPC:</span>
-                <input type="text" id="rpc-url" placeholder="Paste QuickNode/Alchemy/Helius URL..."
-                    value="https://api.mainnet-beta.solana.com">
-                <span id="connection-status" class="badge badge-rpc">CONNECTING...</span>
-            </div>
-        </div>
 
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-header"><span>Block Height</span><i data-lucide="cloud"></i></div>
-                <div class="stat-value" id="stat-height">-</div>
+                <div class="stat-label"><i data-lucide="search"></i> Pairs Catalogued</div>
+                <div class="stat-val" id="stat-scanned">0</div>
             </div>
             <div class="stat-card">
-                <div class="stat-header"><span>RPC Latency</span><i data-lucide="activity"></i></div>
-                <div class="stat-value" style="color: var(--success);" id="stat-latency">- ms</div>
+                <div class="stat-label"><i data-lucide="zap"></i> Explosive (1000%+)</div>
+                <div class="stat-val" id="stat-explosive">0</div>
             </div>
             <div class="stat-card">
-                <div class="stat-header"><span>On-Chain Events</span><i data-lucide="database"></i></div>
-                <div class="stat-value" id="stat-events">0</div>
+                <div class="stat-label"><i data-lucide="shield-check"></i> High Liquidity</div>
+                <div class="stat-val" id="stat-liq">0</div>
             </div>
         </div>
 
-        <div class="main-grid">
-            <div class="content-left">
-                <section>
-                    <div class="section-header">
-                        <h3 style="display:flex;align-items:center;gap:8px;"><i data-lucide="flame"
-                                style="color:#ffa500"></i> Hot Pairs (DexScreener + RPC Verification)</h3>
-                    </div>
-                    <div class="data-table-container">
+        <div class="main-layout">
+            <div class="left-col">
+                <div class="section">
+                    <div class="section-title"><i data-lucide="trending-up"></i> Market Scanner</div>
+                    <div id="table-container">
                         <table id="token-table">
                             <thead>
                                 <tr>
-                                    <th>Token</th>
-                                    <th>Price/Growth</th>
-                                    <th>Liquidity (USD)</th>
-                                    <th>Verified?</th>
-                                    <th>Action</th>
+                                    <th>Token / DEX</th>
+                                    <th>24h Change</th>
+                                    <th>Liquidity</th>
+                                    <th>Status</th>
+                                    <th>Analysis</th>
                                 </tr>
                             </thead>
                             <tbody id="token-body">
                                 <tr>
-                                    <td colspan="5" class="loader">
+                                    <td colspan="5" class="loader-overlay">
                                         <div class="spinner"></div>
-                                        <p style="margin-top:1rem; color:var(--text-secondary);">Listening to chain...
-                                        </p>
+                                        <p style="margin-top:10px">Initializing Scanner...</p>
                                     </td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
-                </section>
+                </div>
 
-                <section id="wallet-section" style="display: none; margin-top: 2rem;">
-                    <div class="section-header">
-                        <h3><i data-lucide="wallet"></i> Holder Verification</h3>
-                    </div>
-                    <div class="data-table-container">
-                        <table id="wallet-table">
-                            <thead>
-                                <tr>
-                                    <th>Rank</th>
-                                    <th>Address</th>
-                                    <th>Profit</th>
-                                    <th>Token Balance</th>
-                                    <th>Label</th>
-                                </tr>
-                            </thead>
-                            <tbody id="wallet-body"></tbody>
-                        </table>
-                    </div>
-                </section>
+                <div class="section" id="smart-money-section" style="display:none">
+                    <div class="section-title"><i data-lucide="wallet"></i> Top 30 Trader Analysis</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Trader Wallet</th>
+                                <th>Combined PnL</th>
+                                <th>Activity</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="wallet-body"></tbody>
+                    </table>
+                </div>
             </div>
 
-            <div class="content-right">
-                <div class="live-feed">
-                    <div class="feed-header"><i data-lucide="radio"></i> Real-Time Feed</div>
-                    <div id="feed-content">
-                        <!-- Items injected here -->
+            <div class="right-col">
+                <div class="section" style="height: 100%;">
+                    <div class="section-title"><span class="live-dot"></span> Signal Feed</div>
+                    <div class="feed-box" id="feed-content">
+                        <div class="feed-item">Initializing on-chain listeners...</div>
                     </div>
                 </div>
             </div>
@@ -417,252 +386,197 @@
     </div>
 
     <script>
-        const { Connection, PublicKey } = solanaWeb3;
-
-        let connection;
-        let eventCount = 0;
-
         const FILTERS = {
             MIN_LIQUIDITY: 5000,
             STRICT_GROWTH: 1000
         };
 
         const API = {
-            SEARCH: (q) => `https://api.dexscreener.com/latest/dex/search/?q=${q}`,
-            BOOSTS: 'https://api.dexscreener.com/token-boosts/latest/v1',
+            TRENDING: 'https://api.dexscreener.com/token-boosts/latest/v1',
             PROFILES: 'https://api.dexscreener.com/token-profiles/latest/v1',
-            TOP_TRADERS: (pairAddr) => `https://io.dexscreener.com/dex/log/top-traders/v2/solana/${pairAddr}`,
+            SEARCH: (q) => `https://api.dexscreener.com/latest/dex/search/?q=${q}`,
+            TRADERS: (addr) => `https://io.dexscreener.com/dex/log/top-traders/v2/solana/${addr}`,
             PROXY: (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`
         };
 
-        // UI Elements
-        const rpcInput = document.getElementById('rpc-url');
-        const connStatus = document.getElementById('connection-status');
-        const feedContent = document.getElementById('feed-content');
         const tokenBody = document.getElementById('token-body');
-        const walletSection = document.getElementById('wallet-section');
         const walletBody = document.getElementById('wallet-body');
-
-        const statHeight = document.getElementById('stat-height');
-        const statLatency = document.getElementById('stat-latency');
-        const statEvents = document.getElementById('stat-events');
+        const smartMoneySection = document.getElementById('smart-money-section');
+        const feedContent = document.getElementById('feed-content');
 
         lucide.createIcons();
 
-        // 1. Initialize RPC Connection
-        async function initRPC() {
-            const url = rpcInput.value.trim();
-            try {
-                connStatus.innerText = "CONNECTING...";
-                connStatus.className = "badge badge-rpc";
-
-                const start = Date.now();
-                connection = new Connection(url, 'confirmed');
-                const height = await connection.getBlockHeight();
-                const latency = Date.now() - start;
-
-                statHeight.innerText = height.toLocaleString();
-                statLatency.innerText = `${latency}ms`;
-                connStatus.innerText = "CONNECTED";
-                connStatus.style.color = "var(--success)";
-
-                logToFeed(`RPC Linked: ${url.substring(0, 20)}...`, 'system');
-            } catch (e) {
-                console.error("RPC Error:", e);
-                connStatus.innerText = "DISCONNECTED";
-                connStatus.style.color = "var(--danger)";
-                logToFeed(`RPC Error: Failed to link. Check URL.`, 'error');
-            }
-        }
-
-        function logToFeed(msg, type = 'info') {
-            eventCount++;
-            statEvents.innerText = eventCount;
-
+        function logSignal(msg, color = '#fff') {
             const div = document.createElement('div');
             div.className = 'feed-item';
-            const now = new Date();
-            const time = now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds();
-
-            let tag = '';
-            if (type === 'new') tag = '<span class="tag">[NEW POOL]</span> ';
-            if (type === 'whale') tag = '<span class="tag" style="color:#ff00ff">[WHALE BUY]</span> ';
-
-            div.innerHTML = `<span class="time">${time}</span> ${tag}${msg}`;
+            div.style.color = color;
+            div.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}`;
             feedContent.prepend(div);
         }
 
-        // 2. Fetch Tokens with Multi-Source Discovery
-        async function fetchTokens() {
-            tokenBody.innerHTML = '<tr><td colspan="5" class="loader"><div class="spinner"></div></td></tr>';
-
+        // 1. DYNAMIC MARKET SCANNER
+        async function fetchMarket() {
+            tokenBody.innerHTML = '<tr><td colspan="5" class="loader-overlay"><div class="spinner"></div></td></tr>';
             try {
-                logToFeed(`Scanning DexScreener & On-Chain feeds...`);
-                let allPairs = [];
+                logSignal('Starting dynamic market sweep...');
 
-                // Parallel discovery
-                const [boostRes, profileRes] = await Promise.all([
-                    fetch(API.BOOSTS).then(r => r.json()),
+                // Fetch from multiple sources
+                const [boosts, profiles] = await Promise.all([
+                    fetch(API.TRENDING).then(r => r.json()),
                     fetch(API.PROFILES).then(r => r.json())
                 ]);
 
-                // Filter for Solana
-                const hotAddrs = [
-                    ...boostRes.slice(0, 5).map(b => b.tokenAddress),
-                    ...profileRes.filter(p => p.chainId === 'solana').slice(0, 10).map(p => p.tokenAddress)
+                logSignal(`Found ${boosts.length} boosted tokens and ${profiles.length} new profiles.`);
+
+                const allAddrs = [
+                    ...boosts.slice(0, 10).map(b => b.tokenAddress),
+                    ...profiles.filter(p => p.chainId === 'solana').slice(0, 10).map(p => p.tokenAddress)
                 ].join(',');
 
-                const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${hotAddrs}`);
+                const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${allAddrs}`);
                 const data = await res.json();
-                if (data.pairs) allPairs = data.pairs;
 
-                // De-duplicate & Filter
-                const solPairs = allPairs.filter(p => p.chainId === 'solana' && (p.liquidity?.usd || 0) >= FILTERS.MIN_LIQUIDITY);
-                solPairs.sort((a, b) => (b.priceChange?.h24 || 0) - (a.priceChange?.h24 || 0));
+                let pairs = data.pairs || [];
 
-                renderTokens(solPairs);
+                // 2. EXPLOSIVE GROWTH FILTER
+                const explosive = pairs.filter(p => {
+                    if (p.chainId !== 'solana') return false;
+                    const liq = p.liquidity?.usd || 0;
+                    const h24 = p.priceChange?.h24 || 0;
+                    return liq >= FILTERS.MIN_LIQUIDITY && h24 > 10;
+                });
+
+                explosive.sort((a, b) => (b.priceChange?.h24 || 0) - (a.priceChange?.h24 || 0));
+
+                document.getElementById('stat-scanned').innerText = pairs.length;
+                document.getElementById('stat-explosive').innerText = explosive.filter(p => p.priceChange?.h24 >= 1000).length;
+                document.getElementById('stat-liq').innerText = explosive.filter(p => p.liquidity?.usd > 50000).length;
+
+                renderTokens(explosive);
+                logSignal('Scanner sweep complete.', '#39d353');
 
             } catch (e) {
-                logToFeed(`Discovery error: ${e.message}`, 'error');
-                tokenBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--danger);">Scan Failed. Try again.</td></tr>';
+                logSignal(`Scanner Error: ${e.message}`, '#ff4444');
             }
         }
 
         function renderTokens(tokens) {
             tokenBody.innerHTML = '';
-            if (tokens.length === 0) {
-                tokenBody.innerHTML = '<tr><td colspan="5" style="text-align:center">No active pairs found.</td></tr>';
-                return;
-            }
-
-            tokens.forEach(token => {
+            tokens.forEach(t => {
                 const tr = document.createElement('tr');
-                const h24 = token.priceChange?.h24 || 0;
-                const isExtreme = h24 >= FILTERS.STRICT_GROWTH;
+                const h24 = t.priceChange?.h24 || 0;
+                const isExplosive = h24 >= 1000;
 
                 tr.innerHTML = `
                     <td>
-                        <div style="font-weight:700">${token.baseToken.name}</div>
-                        <div style="font-size:0.7rem; color:var(--text-secondary)">${token.baseToken.symbol}</div>
+                        <div style="font-weight:700">${t.baseToken.name}</div>
+                        <div style="font-size:0.75rem; color:var(--text-secondary)">${t.dexId.toUpperCase()} | ${t.baseToken.symbol}</div>
+                    </td>
+                    <td class="${h24 >= 0 ? 'up' : 'down'}">
+                        <b>${h24.toFixed(2)}%</b>
+                    </td>
+                    <td>$${(t.liquidity?.usd || 0).toLocaleString()}</td>
+                    <td>
+                        <span class="badge ${isExplosive ? 'badge-explosive' : 'badge-trending'}">
+                            ${isExplosive ? 'EXPLOSIVE 1000%+' : 'TRENDING'}
+                        </span>
                     </td>
                     <td>
-                        <div class="${h24 >= 0 ? 'up' : 'down'}">${h24.toFixed(2)}%</div>
-                        <div style="font-size:0.7rem">$${token.priceUsd}</div>
-                    </td>
-                    <td>$${(token.liquidity?.usd || 0).toLocaleString()}</td>
-                    <td><span id="v-${token.pairAddress}" class="badge badge-rpc">PENDING...</span></td>
-                    <td>
-                        <button class="refresh-btn" style="padding:4px 8px; font-size:0.7rem" onclick="verifyAndAnalyze('${token.pairAddress}', '${token.baseToken.name}', '${token.baseToken.address}')">
-                            VERIFY
+                        <button class="btn" style="padding:4px 10px; font-size:0.75rem" onclick="analyzeSmartMoney('${t.pairAddress}', '${t.baseToken.symbol}')">
+                            Analyze Wallets
                         </button>
                     </td>
                 `;
                 tokenBody.appendChild(tr);
-
-                // Automatic background verification
-                verifyOnChain(token.pairAddress, token.baseToken.address);
             });
         }
 
-        async function verifyOnChain(pairAddr, mintAddr) {
-            if (!connection) return;
+        // 3. SMART MONEY TRACKER
+        async function analyzeSmartMoney(pairAddr, symbol) {
+            smartMoneySection.style.display = 'block';
+            walletBody.innerHTML = '<tr><td colspan="5" class="loader-overlay"><div class="spinner"></div></td></tr>';
+            smartMoneySection.scrollIntoView({ behavior: 'smooth' });
+
+            logSignal(`Auditing top traders for ${symbol}...`);
+
             try {
-                const badge = document.getElementById(`v-${pairAddr}`);
-                const bal = await connection.getAccountInfo(new PublicKey(pairAddr));
-                if (bal) {
-                    badge.innerText = "VERIFIED";
-                    badge.style.color = "var(--success)";
-                    badge.style.background = "rgba(0, 255, 189, 0.1)";
-                    logToFeed(`Verified Pool Storage: ${pairAddr.substring(0, 6)}...`, 'info');
+                const url = API.TRADERS(pairAddr);
+                const proxies = [
+                    u => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
+                    u => `https://corsproxy.io/?${encodeURIComponent(u)}`
+                ];
+
+                let data = null;
+                for (let p of proxies) {
+                    try {
+                        const res = await fetch(p(url));
+                        const json = await res.json();
+                        data = p === proxies[0] ? JSON.parse(json.contents) : json;
+                        if (data && data.traders) break;
+                    } catch (e) { }
                 }
-            } catch (e) { }
-        }
 
-        async function verifyAndAnalyze(pairAddr, tokenName, mintAddr) {
-            walletSection.style.display = 'block';
-            walletBody.innerHTML = '<tr><td colspan="5" class="loader"><div class="spinner"></div></td></tr>';
-            walletSection.scrollIntoView({ behavior: 'smooth' });
+                if (!data || !data.traders) throw new Error("Could not retrieve trader logs.");
 
-            try {
-                logToFeed(`Running RPC Audit for ${tokenName}...`);
-                const url = API.TOP_TRADERS(pairAddr);
-                const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
-                const json = await res.json();
-                const data = JSON.parse(json.contents);
+                const traders = data.traders.slice(0, 30);
+                renderWallets(traders);
+                logSignal(`Audit successful: Found ${traders.length} active whales.`, '#ffd700');
 
-                if (!data.traders) throw new Error("No logs");
-
-                const top30 = data.traders.slice(0, 30);
-                renderWallets(top30, mintAddr);
             } catch (e) {
-                walletBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--danger);">Audit failed. RPC or Proxy error.</td></tr>';
+                logSignal(`Trader Audit Fail: ${e.message}`, '#ff4444');
+                walletBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--danger)">${e.message}</td></tr>`;
             }
         }
 
-        async function renderWallets(traders, mintAddr) {
+        function renderWallets(traders) {
             walletBody.innerHTML = '';
-
-            for (const [index, t] of traders.entries()) {
+            traders.forEach((t, i) => {
                 const tr = document.createElement('tr');
-                const profit = t.pnl || 0;
+                const pnl = t.pnl || 0;
                 const buyUsd = t.boughtUsd || 0;
-                const profitPct = buyUsd > 0 ? ((profit / buyUsd) * 100).toFixed(0) : "0";
-                const isElite = profitPct >= 500 && profit > 0;
+                const profitPct = buyUsd > 0 ? ((pnl / buyUsd) * 100).toFixed(0) : 0;
+                const isElite = profitPct >= 500;
 
-                if (isElite) tr.className = 'elite-wallet';
-
-                // Real-time on-chain balance check (if RPC works)
-                let rpcLabel = "Checking...";
-                try {
-                    if (connection) {
-                        const bal = await connection.getBalance(new PublicKey(t.maker));
-                        rpcLabel = (bal / 1e9).toFixed(2) + " SOL";
-                    }
-                } catch (e) { rpcLabel = "Error"; }
+                if (isElite) tr.className = 'elite-row';
 
                 tr.innerHTML = `
-                    <td>#${index + 1}</td>
+                    <td>#${i + 1}</td>
                     <td style="font-family:monospace">
                         <a href="https://solscan.io/account/${t.maker}" target="_blank" style="color:var(--accent-color); text-decoration:none">
-                            ${t.maker.substring(0, 4)}...${t.maker.substring(t.maker.length - 4)}
+                            ${t.maker.substring(0, 6)}...${t.maker.substring(t.maker.length - 6)}
                         </a>
                     </td>
-                    <td class="${profit >= 0 ? 'up' : 'down'}">$${profit.toLocaleString()} (${profitPct}%)</td>
-                    <td id="b-${t.maker}">${rpcLabel}</td>
-                    <td><span class="badge ${isElite ? 'badge-success' : 'badge-rpc'}">${isElite ? 'ELITE' : 'ACTIVE'}</span></td>
+                    <td class="${pnl >= 0 ? 'up' : 'down'}">
+                        $${pnl.toLocaleString()} (${profitPct}%)
+                    </td>
+                    <td>${t.txCount || 'N/A'} TXs</td>
+                    <td>
+                        <span class="badge ${isElite ? 'badge-pnl' : 'badge-trending'}">
+                            ${isElite ? 'WHALE BOSS' : 'ACTOR'}
+                        </span>
+                    </td>
                 `;
                 walletBody.appendChild(tr);
-            }
+            });
         }
 
-        async function scanCa() {
+        async function auditCa() {
             const ca = document.getElementById('ca-input').value.trim();
             if (!ca) return;
-
-            tokenBody.innerHTML = '<tr><td colspan="5" class="loader"><div class="spinner"></div></td></tr>';
+            logSignal(`Direct audit initiated for CA: ${ca}`);
+            tokenBody.innerHTML = '<tr><td colspan="5" class="loader-overlay"><div class="spinner"></div></td></tr>';
             try {
-                logToFeed(`On-Chain Probe: Scanning ${ca}...`, 'info');
                 const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${ca}`);
                 const data = await res.json();
-                if (data.pairs) renderTokens(data.pairs.filter(p => p.chainId === 'solana'));
-            } catch (e) { logToFeed(`CA Scan Error`, 'error'); }
+                renderTokens(data.pairs || []);
+            } catch (e) { logSignal(`CA Audit Fail`, '#ff4444'); }
         }
 
-        // Initialize
-        document.getElementById('refresh-btn').addEventListener('click', fetchTokens);
-        document.getElementById('scan-ca-btn').addEventListener('click', scanCa);
-        rpcInput.addEventListener('change', initRPC);
+        document.getElementById('refresh-btn').addEventListener('click', fetchMarket);
+        document.getElementById('scan-btn').addEventListener('click', auditCa);
 
-        initRPC();
-        fetchTokens();
-
-        // Interval updates
-        setInterval(async () => {
-            if (connection) {
-                const h = await connection.getBlockHeight();
-                statHeight.innerText = h.toLocaleString();
-            }
-        }, 5000);
+        fetchMarket();
+        setInterval(fetchMarket, 60000); // Auto refresh every minute
     </script>
 </body>
 
